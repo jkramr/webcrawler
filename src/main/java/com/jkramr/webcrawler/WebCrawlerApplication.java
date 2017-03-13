@@ -1,5 +1,6 @@
 package com.jkramr.webcrawler;
 
+import com.jkramr.webcrawler.service.WebCrawlerService;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.boot.SpringApplication;
@@ -10,10 +11,6 @@ import org.springframework.web.client.RestTemplate;
 
 @SpringBootApplication
 public class WebCrawlerApplication {
-
-
-  public static final String HTTPS_PREFIX = "https://";
-  public static final String HTTP_PREFIX = "http://";
 
   public static void main(String[] args) {
     SpringApplication.run(WebCrawlerApplication.class, args);
@@ -28,13 +25,9 @@ public class WebCrawlerApplication {
   }
 
   @Bean
-  public CommandLineRunner run(RestTemplate restTemplate) throws Exception {
-    return args -> {
-      String url = HTTPS_PREFIX + domain;
-
-      String response = restTemplate.getForObject(url, String.class);
-
-      System.out.println(response);
-    };
+  public CommandLineRunner run(WebCrawlerService webCrawlerService)
+          throws Exception {
+    return args -> webCrawlerService.startCrawl();
   }
+
 }
