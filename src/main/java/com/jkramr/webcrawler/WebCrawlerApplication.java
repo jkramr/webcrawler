@@ -26,13 +26,13 @@ public class WebCrawlerApplication {
   }
 
   @Bean
-  public AssetLogger assetLogger(WebDictionary webDictionary) {
-    return new JsonAssetLogger(webDictionary);
+  public Consumer<String> logger() {
+    return System.out::println;
   }
 
   @Bean
-  public Consumer<String> debugLogger() {
-    return System.out::println;
+  public AssetLogger assetLogger(Consumer<String> logger) {
+    return new JsonAssetLogger(logger);
   }
 
   @Bean

@@ -9,4 +9,10 @@ public interface AssetLogger {
   Consumer<String> getLogger();
 
   void endLog();
+
+  void startForPage(Url current);
+
+  void endForPage();
+
+  void logAsset(String asset);
 }

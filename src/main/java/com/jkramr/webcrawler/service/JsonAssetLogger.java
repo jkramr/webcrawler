@@ -12,38 +12,35 @@ public class JsonAssetLogger
   @NonNull
   Consumer<String> logger;
 
-  public JsonAssetLogger(WebDictionary webDictionary) {
-    this.logger =
-            url -> poorMansJsonOutput(
-                    url,
-                    webDictionary.getAssets(
-                            Url.of(url))
-            );
+  public JsonAssetLogger(Consumer<String> logger) {
+    this.logger = logger;
   }
 
   @Override
   public void startLog() {
-    System.out.println("[");
+    logger.accept("[");
   }
 
   @Override
   public void endLog() {
-    System.out.println("]");
+    logger.accept("]");
   }
 
-  private void poorMansJsonOutput(
-          String url,
-          List<String> assets
-  ) {
-    System.out.println("  {");
-    System.out.println("    \"url\": \"" + url + "\",");
-    System.out.println("    \"assets\": [");
+  @Override
+  public void startForPage(Url current) {
+    logger.accept("  {");
+    logger.accept("    \"url\": \"" + current + "\",");
+    logger.accept("    \"assets\": [");
+  }
 
-    String offset = "      ";
+  @Override
+  public void endForPage() {
+    logger.accept("    ]");
+    logger.accept("  }");
+  }
 
-    assets.forEach(asset -> System.out.println(offset + "\"" + asset + "\","));
-
-    System.out.println("    ]");
-    System.out.println("  }");
+  @Override
+  public void logAsset(String asset) {
+    logger.accept("      \"" + asset + "\",");
   }
 }

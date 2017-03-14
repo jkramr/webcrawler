@@ -83,7 +83,11 @@ public class WebCrawlerService {
         if (isHtmlPage) {
           List<Url> unvisitedLinks = new ArrayList<>();
 
+          assetLogger.startForPage(current);
+
           crawlHtml(current, content, unvisitedLinks);
+
+          assetLogger.endForPage();
 
           if (debug) {
             debugLogger.accept("Stumbled upon new links on " +
@@ -91,8 +95,6 @@ public class WebCrawlerService {
                                ": " +
                                unvisitedLinks);
           }
-
-          logAssets(current);
 
           unvisitedLinks.forEach(link -> crawl(
                   link,
@@ -121,12 +123,15 @@ public class WebCrawlerService {
     Arrays.stream(assetTypes)
           .filter(current.getValue()::endsWith)
           .findAny()
-          .map(asset ->
-                       webDictionary.addAsset(
-                               current,
-                               asset,
-                               parent
-                       ))
+          .map(asset -> {
+            assetLogger.logAsset(current.getValue());
+
+            return webDictionary.addAsset(
+                    current,
+                    asset,
+                    parent
+            );
+          })
           .orElseGet(() -> webDictionary.add(current));
   }
 
@@ -157,24 +162,6 @@ public class WebCrawlerService {
 
       crawlHtml(parent, subHtml, links);
     }
-  }
-
-  private boolean visitLink(Url child) {
-    try {
-      String childContent = restTemplate.getForObject(
-              child.getValue(),
-              String.class
-      );
-
-      if (childContent != null) {
-        return true;
-      }
-
-    } catch (Exception ignored) {
-      return false;
-    }
-
-    return false;
   }
 
   private MatchedLink matchLink(String html) {
