@@ -148,8 +148,7 @@ public class WebCrawlerService {
                     : root.append(parsedLink);
 
         if (!webDictionary.contains(child) &&
-            !links.contains(child) &&
-            visitLink(child)) {
+            !links.contains(child)) {
           links.add(child);
         }
 
