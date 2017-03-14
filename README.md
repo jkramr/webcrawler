@@ -12,7 +12,7 @@ RESTful microservice, powered by Spring Boot, one-button bootstrap
 
 `-Dserver.port` - port for this application
 
-`-Dcrawler.depth` - depth for this crawler
+`-Ddepth` - depth for this crawler
 Amount of nested links for crawler to visit
 
  `-Xss[g|G|m|M|k|K]` - stack size 
@@ -20,5 +20,5 @@ For big numbers of `crawler.depth` (> 1000)
 you might consider increasing stack size
 due to recursive implementation
 
-`-Dcrawler.asset_types` - list of assets
+`-DassetTypes` - list of assets
 `[png,jpf,js,css]`

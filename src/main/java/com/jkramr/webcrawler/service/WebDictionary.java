@@ -162,8 +162,8 @@ public class WebDictionary {
   private class TrieNode {
     final int depth;
 
-    char     value;
-    TrieNode parent;
+    Character value;
+    TrieNode  parent;
 
     HashMap<Character, TrieNode>    children;
     HashMap<String, List<TrieNode>> assets;

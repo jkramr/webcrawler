@@ -20,14 +20,14 @@ public class WebCrawlerService {
 
   private final RestTemplate restTemplate;
 
-  @Value("${crawler.domain:google.com}")
+  @Value("${domain:google.com}")
   String domain;
 
-  @Value("${crawler.depth:2}")
+  @Value("${depth:2}")
   int depth;
 
-  @Value("${crawler.asset_types:[jpg,css,js,png]}")
-  String[] asset_types;
+  @Value("${assetTypes:[jpg,css,js,png]}")
+  String[] assetTypes;
 
   private Url           root;
   private WebDictionary webDictionary;
@@ -37,16 +37,14 @@ public class WebCrawlerService {
           RestTemplate restTemplate,
           WebDictionary webDictionary
   ) {
-    root = Url.ofFull(domain);
-
     this.webDictionary = webDictionary;
     this.restTemplate = restTemplate;
   }
 
   public void startCrawl() {
-    crawl(root, root, 0);
+    root = Url.ofFull(domain);
 
-    System.out.println(webDictionary);
+    crawl(root, root, 0);
   }
 
   private void crawl(
@@ -84,7 +82,7 @@ public class WebCrawlerService {
           Url parent,
           Url current
   ) {
-    Arrays.stream(asset_types)
+    Arrays.stream(assetTypes)
           .filter(current.getValue()::endsWith)
           .findAny()
           .map(asset -> webDictionary.addAsset(
