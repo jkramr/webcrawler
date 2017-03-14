@@ -1,5 +1,6 @@
 package com.jkramr.webcrawler.service;
 
+import lombok.Data;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
@@ -7,14 +8,25 @@ import org.springframework.web.client.RestTemplate;
 
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.HashMap;
+import java.util.Comparator;
 import java.util.List;
 import java.util.function.Consumer;
 
 @Component
 public class WebCrawlerService {
 
-  private static HashMap<String, String> LINK_MATCHERS = new HashMap<>();
+  private static List<Matcher> LINK_MATCHERS = new ArrayList<>();
+
+  static {
+    LINK_MATCHERS.add(new Matcher("https://", "\"", true));
+    LINK_MATCHERS.add(new Matcher("https://", "\'", true));
+
+    LINK_MATCHERS.add(new Matcher("href=\"", "\"", false));
+    LINK_MATCHERS.add(new Matcher("href=\'", "\'", false));
+
+    LINK_MATCHERS.add(new Matcher("src=\"", "\"", false));
+    LINK_MATCHERS.add(new Matcher("src=\'", "\'", false));
+  }
 
   @Value("${domain:google.com}")
   String   domain;
@@ -29,13 +41,6 @@ public class WebCrawlerService {
   private AssetLogger      assetLogger;
   private Consumer<String> debugLogger;
   private Url              root;
-
-  {
-    LINK_MATCHERS.put("src=\"", "\"");
-    LINK_MATCHERS.put("src=\'", "\'");
-    LINK_MATCHERS.put("href=\"", "\"");
-    LINK_MATCHERS.put("href=\'", "\'");
-  }
 
   @Autowired
   public WebCrawlerService(
@@ -68,15 +73,17 @@ public class WebCrawlerService {
   ) {
     if (depth <= this.depth) {
       try {
-        String html = restTemplate.getForObject(
-                current.getValue(),
+        String content = restTemplate.getForObject(
+                root.getValue(),
                 String.class
         );
 
-        if (html != null && html.contains("<html")) {
+        boolean isHtmlPage = content != null && content.contains("<html");
+
+        if (isHtmlPage) {
           List<Url> unvisitedLinks = new ArrayList<>();
 
-          crawlHtml(current, html, unvisitedLinks);
+          crawlHtml(current, content, unvisitedLinks);
 
           if (debug) {
             debugLogger.accept("Stumbled upon new links on " +
@@ -87,7 +94,10 @@ public class WebCrawlerService {
 
           logAssets(current);
 
-          unvisitedLinks.forEach(link -> crawl(link, depth + 1));
+          unvisitedLinks.forEach(link -> crawl(
+                  link,
+                  depth + 1
+          ));
         }
       } catch (Exception ignored) {
       }
@@ -125,55 +135,92 @@ public class WebCrawlerService {
           String html,
           List<Url> links
   ) {
-    Matcher matcher = matchLink(html);
+    MatchedLink matchedLink = matchLink(html);
 
-    if (matcher != null) {
-      String subHtml = html.substring(matcher.startIndex);
+    if (matchedLink != null && matchedLink.subHtml != null) {
+      String subHtml = matchedLink.subHtml;
+
+      Url parsedLink = matchedLink.link;
+
+      if (!parsedLink.isFullPath() || root.hasChild(parsedLink)) {
+        Url child = root.hasChild(parsedLink)
+                    ? parsedLink
+                    : root.append(parsedLink);
+
+        if (!webDictionary.contains(child) &&
+            !links.contains(child) &&
+            visitLink(child)) {
+          links.add(child);
+        }
+
+        addToDictionary(child, parent);
+      }
 
       crawlHtml(parent, subHtml, links);
-
-      int endLinkIndex = subHtml.indexOf(matcher.end);
-
-      if (endLinkIndex != -1) {
-        Url parsedLink = Url.of(subHtml.substring(0, endLinkIndex));
-
-        if (!parsedLink.isFullPath() || root.hasChild(parsedLink)) {
-          Url child = root.hasChild(parsedLink)
-                      ? parsedLink
-                      : root.append(parsedLink);
-
-          if (!webDictionary.contains(child)) {
-            links.add(child);
-          }
-
-          addToDictionary(child, parent);
-        }
-      }
     }
   }
 
-  private Matcher matchLink(String html) {
-    return LINK_MATCHERS.keySet()
-                        .stream()
-                        .filter(html::contains)
-                        .findAny()
-                        .map((start) -> matchStart(html, start))
-                        .orElse(null);
+  private boolean visitLink(Url child) {
+    try {
+      String childContent = restTemplate.getForObject(
+              child.getValue(),
+              String.class
+      );
+
+      if (childContent != null) {
+        return true;
+      }
+
+    } catch (Exception ignored) {
+      return false;
+    }
+
+    return false;
   }
 
-  private Matcher matchStart(String html, String start) {
-    Matcher matcher = new Matcher();
+  private MatchedLink matchLink(String html) {
+    MatchedLink matchedLink = new MatchedLink();
 
-    matcher.startIndex = html.indexOf(start) + start.length();
-    matcher.start = start;
-    matcher.end = LINK_MATCHERS.get(start);
+    Matcher matcher = LINK_MATCHERS
+            .stream()
+            .filter(m -> html.contains(m.start))
+            .min(Comparator.comparing(m -> html.indexOf(m.start)))
+            .orElse(null);
 
-    return matcher;
+    if (matcher == null) {
+      return null;
+    }
+
+    int startIndex = html.indexOf(matcher.start);
+
+    startIndex = matcher.included
+                 ? startIndex
+                 : startIndex + matcher.start.length();
+
+    String subHtml = html.substring(startIndex);
+
+    int endIndex = subHtml.indexOf(matcher.end);
+
+    if (endIndex == -1) {
+      return matchedLink;
+    }
+
+    matchedLink.link = Url.of(subHtml.substring(0, endIndex));
+
+    matchedLink.subHtml = subHtml.substring(endIndex);
+
+    return matchedLink;
   }
 
-  private class Matcher {
-    public int    startIndex;
-    public String start;
-    public String end;
+  @Data
+  private static class Matcher {
+    public final String  start;
+    public final String  end;
+    public final boolean included;
+  }
+
+  private class MatchedLink {
+    String subHtml;
+    Url    link;
   }
 }
