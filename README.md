@@ -12,8 +12,13 @@ RESTful microservice, powered by Spring Boot, one-button bootstrap
 
 `-Dserver.port` - port for this application
 
-##RESTful API:
+`-Dcrawler.depth` - depth for this crawler
+Amount of nested links for crawler to visit
 
-Thanks to Spring HATEOAS, the service provides easy access to the state:
+ `-Xss[g|G|m|M|k|K]` - stack size 
+For big numbers of `crawler.depth` (> 1000) 
+you might consider increasing stack size
+due to recursive implementation
 
-**NB!** JSONView plugin for chrome is highly recommended: https://chrome.google.com/webstore/detail/jsonview/chklaanhfefbnpoihckbnefhakgolnmc/related?hl=en
+`-Dcrawler.asset_types` - list of assets
+`[png,jpf,js,css]`

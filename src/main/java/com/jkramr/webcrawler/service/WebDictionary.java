@@ -4,7 +4,6 @@ import lombok.Data;
 import org.springframework.stereotype.Component;
 
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 
@@ -18,52 +17,73 @@ public class WebDictionary {
     return head == null;
   }
 
-  public String add(String url) {
+  public Url add(Url url) {
     if (url == null) {
-      return null;
+      return url;
     }
 
     if (head == null) {
       head = new TrieNode(0);
     }
 
-    insert(url);
+    insert(url.getValue());
 
     return url;
   }
 
-  public boolean contains(String url) {
+  public boolean contains(Url url) {
+    if (url == null) {
+      return false;
+    }
+
+    String word = url.getValue();
+
     if (head == null ||
-        !head.hasChild(url.charAt(0))
+        !head.hasChild(word.charAt(0))
             ) {
       return false;
     }
 
-    TrieNode node = searchTreeDown(head, url);
+    TrieNode node = searchTreeDown(head, word);
 
-    return node.depth == url.length();
+    return node.depth == word.length();
   }
 
-  public String addAsset(String parent, String assetType, String asset) {
-    TrieNode assetNode = insert(asset);
+  public Url addAsset(Url parent, String assetType, Url asset) {
+    if (parent == null || asset == null) {
+      return null;
+    }
 
-    TrieNode parentNode = insert(parent);
+    String assetUrl  = asset.getValue();
+    String parentUrl = parent.getValue();
+
+    TrieNode assetNode = insert(assetUrl);
+
+    TrieNode parentNode = insert(parentUrl);
 
     parentNode.addAsset(assetType, assetNode);
 
     return asset;
   }
 
-  public boolean hasAssets(String url) {
-    TrieNode trieNode = searchTreeDown(head, url);
+  public boolean hasAssets(Url url) {
+    if (url == null) {
+      return false;
+    }
+
+    TrieNode trieNode = searchTreeDown(head, url.getValue());
 
     return trieNode.assets != null;
   }
 
-  public List<String> getAssets(String parent) {
+  public List<String> getAssets(Url parent) {
     List<String> assets = new ArrayList<>();
 
-    TrieNode parentNode = searchTreeDown(head, parent);
+    if (parent == null) {
+      return assets;
+    }
+
+    TrieNode parentNode = searchTreeDown(head, parent.getValue());
 
     if (parentNode.assets == null) {
       return assets;
@@ -138,17 +158,25 @@ public class WebDictionary {
   private class TrieNode {
     final int depth;
 
-    char value;
+    char     value;
     TrieNode parent;
 
     HashMap<Character, TrieNode>    children;
     HashMap<String, List<TrieNode>> assets;
 
     public boolean hasChild(char c) {
+      if (children == null) {
+        return false;
+      }
+
       return children.containsKey(c);
     }
 
     public TrieNode get(char c) {
+      if (children == null) {
+        return null;
+      }
+
       return children.get(c);
     }
 

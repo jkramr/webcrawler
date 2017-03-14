@@ -12,7 +12,6 @@ import java.util.HashMap;
 public class WebCrawlerService {
 
   private static final HashMap<String, String> LINK_MATCHERS = new HashMap<>();
-  private static final int                     MAX_DEPTH     = 2;
 
   static {
     LINK_MATCHERS.put("href=\"", "\"");
@@ -21,13 +20,16 @@ public class WebCrawlerService {
 
   private final RestTemplate restTemplate;
 
-  @Value("${domain:google.com}")
+  @Value("${crawler.domain:google.com}")
   String domain;
 
-  @Value("${asset_types:[jpg,css,js,png]}")
+  @Value("${crawler.depth:2}")
+  int depth;
+
+  @Value("${crawler.asset_types:[jpg,css,js,png]}")
   String[] asset_types;
 
-  private Url root;
+  private Url           root;
   private WebDictionary webDictionary;
 
   @Autowired
@@ -47,12 +49,12 @@ public class WebCrawlerService {
     System.out.println(webDictionary);
   }
 
-  private boolean crawl(
+  private void crawl(
           Url parent,
           Url current,
           int depth
   ) {
-    if (depth <= MAX_DEPTH) {
+    if (depth <= this.depth) {
       try {
         String html = restTemplate.getForObject(
                 current.getValue(),
@@ -60,27 +62,21 @@ public class WebCrawlerService {
         );
 
         if (html == null) {
-          webDictionary.add(current.getValue());
+          webDictionary.add(current);
 
           System.out.println("404: Not found");
-
-          return false;
         }
 
-        if (!webDictionary.contains(current.getValue())) {
+        if (!webDictionary.contains(current)) {
           System.out.println(current);
 
           addToDictionary(parent, current);
 
-          return crawlHtml(parent, html, depth);
+          crawlHtml(parent, html, depth);
         }
 
-        return false;
-      } catch (Exception e) {
-        return false;
+      } catch (Exception ignored) {
       }
-    } else {
-      return true;
     }
   }
 
@@ -94,41 +90,53 @@ public class WebCrawlerService {
           .map(asset -> webDictionary.addAsset(
                   parent,
                   asset,
-                  current.getValue()
+                  current
           ))
-          .orElseGet(() -> webDictionary.add(current.getValue()));
+          .orElseGet(() -> webDictionary.add(current));
   }
 
-  private boolean crawlHtml(
+  private void crawlHtml(
           Url parent,
           String html,
           int depth
   ) {
-    LINK_MATCHERS.forEach((startMatcher, endMatcher) -> {
-      int startLinkIndex = getLinkIndex(html, startMatcher);
+    LINK_MATCHERS.forEach((startMatcher, endMatcher) -> crawlMatchingLinks(
+            parent,
+            html,
+            depth,
+            startMatcher,
+            endMatcher
+    ));
+  }
 
-      if (startLinkIndex != -1) {
-        String subHtml = html.substring(startLinkIndex);
+  private void crawlMatchingLinks(
+          Url parent,
+          String html,
+          int depth,
+          String startMatcher,
+          String endMatcher
+  ) {
+    int startLinkIndex = getLinkIndex(html, startMatcher);
 
-        crawlHtml(parent, subHtml, depth);
+    if (startLinkIndex != -1) {
+      String subHtml = html.substring(startLinkIndex);
 
-        int endLinkIndex = subHtml.indexOf(endMatcher);
+      crawlHtml(parent, subHtml, depth);
 
-        if (endLinkIndex != -1) {
-          Url parsedLink = Url.of(subHtml.substring(0, endLinkIndex));
+      int endLinkIndex = subHtml.indexOf(endMatcher);
 
-          if (!parsedLink.isFullPath() || root.hasChild(parsedLink)) {
-            Url child = root.hasChild(parsedLink)
-                           ? parsedLink
-                           : root.append(parsedLink);
+      if (endLinkIndex != -1) {
+        Url parsedLink = Url.of(subHtml.substring(0, endLinkIndex));
 
-            crawl(parent, child, depth + 1);
-          }
+        if (!parsedLink.isFullPath() || root.hasChild(parsedLink)) {
+          Url child = root.hasChild(parsedLink)
+                      ? parsedLink
+                      : root.append(parsedLink);
+
+          crawl(parent, child, depth + 1);
         }
       }
-    });
-
-    return true;
+    }
   }
 
   private int getLinkIndex(String html, String startMatcher) {

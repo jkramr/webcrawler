@@ -1,10 +1,12 @@
 package com.jkramr.webcrawler.model;
 
+import com.jkramr.webcrawler.service.Url;
 import com.jkramr.webcrawler.service.WebDictionary;
 import org.junit.Before;
 import org.junit.Test;
 
 import java.util.Arrays;
+import java.util.Collections;
 
 import static org.junit.Assert.assertEquals;
 
@@ -21,23 +23,23 @@ public class WebDictionaryTest {
     empty = new WebDictionary();
 
     one = new WebDictionary();
-    one.add("https://example.com");
+    one.add(Url.of("https://example.com"));
 
     nesting = new WebDictionary();
-    nesting.add("https://example.com/images");
+    nesting.add(Url.of("https://example.com/images"));
 
     nestingWithAssets = new WebDictionary();
-    nestingWithAssets.add("https://example.com/images");
+    nestingWithAssets.add(Url.of("https://example.com/images"));
     nestingWithAssets.addAsset(
-            "https://example.com",
+            Url.of("https://example.com"),
             "png",
-            "https://example.com/images/123.png"
+            Url.of("https://example.com/images/123.png")
     );
 
     nestingWithAssets.addAsset(
-            "https://example.com",
+            Url.of("https://example.com"),
             "png",
-            "https://example.com/images/1234.png"
+            Url.of("https://example.com/images/1234.png")
     );
   }
 
@@ -53,16 +55,16 @@ public class WebDictionaryTest {
           throws Exception {
     assertEquals(
             false,
-            empty.contains("https://example.com")
+            empty.contains(Url.of("https://example.com"))
     );
 
     assertEquals(
             true,
-            one.contains("https://example.com")
+            one.contains(Url.of("https://example.com"))
     );
     assertEquals(
             false,
-            one.contains("https://example.com/images")
+            one.contains(Url.of("https://example.com/images"))
     );
   }
 
@@ -71,15 +73,15 @@ public class WebDictionaryTest {
           throws Exception {
     assertEquals(
             true,
-            nesting.contains("https://example.com")
+            nesting.contains(Url.of("https://example.com"))
+    );
+    assertEquals(
+            true,
+            nesting.contains(Url.of("https://example.com/images"))
     );
     assertEquals(
             false,
-            nesting.contains("https://example.com/images")
-    );
-    assertEquals(
-            false,
-            nesting.contains("https://example.com/images/logos")
+            nesting.contains(Url.of("https://example.com/images/logos"))
     );
   }
 
@@ -89,17 +91,17 @@ public class WebDictionaryTest {
 
     assertEquals(
             false,
-            nesting.hasAssets("https://example.com")
+            nesting.hasAssets(Url.of("https://example.com"))
     );
 
     assertEquals(
             false,
-            nestingWithAssets.hasAssets("https://example.com/images")
+            nestingWithAssets.hasAssets(Url.of("https://example.com/images"))
     );
 
     assertEquals(
             true,
-            nestingWithAssets.hasAssets("https://example.com")
+            nestingWithAssets.hasAssets(Url.of("https://example.com"))
     );
   }
 
@@ -108,11 +110,16 @@ public class WebDictionaryTest {
           throws Exception {
 
     assertEquals(
+            Collections.emptyList(),
+            nesting.getAssets(Url.of("https://example.com"))
+    );
+
+    assertEquals(
             Arrays.asList(
                     "https://example.com/images/123.png",
                     "https://example.com/images/1234.png"
             ),
-            nestingWithAssets.getAssets("https://example.com")
+            nestingWithAssets.getAssets(Url.of("https://example.com"))
     );
 
   }

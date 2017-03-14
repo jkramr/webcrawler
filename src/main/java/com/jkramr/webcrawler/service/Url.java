@@ -3,7 +3,7 @@ package com.jkramr.webcrawler.service;
 import lombok.Data;
 
 @Data
-class Url {
+public class Url {
   public static final String HTTPS_PREFIX = "https://";
 
   private final String value;
