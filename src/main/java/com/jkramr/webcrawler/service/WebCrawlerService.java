@@ -7,14 +7,14 @@ import org.springframework.web.client.RestTemplate;
 
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.HashMap;
 import java.util.List;
 import java.util.function.Consumer;
 
 @Component
 public class WebCrawlerService {
 
-  private static final String START_MATCHER = "href=\"";
-  private static final String END_MATCHER   = "\"";
+  private static HashMap<String, String> LINK_MATCHERS = new HashMap<>();
 
   @Value("${domain:google.com}")
   String   domain;
@@ -24,14 +24,18 @@ public class WebCrawlerService {
   int      depth;
   @Value("${assetTypes:jpg,css,js,png}")
   String[] assetTypes;
-
   private WebDictionary    webDictionary;
   private RestTemplate     restTemplate;
   private AssetLogger      assetLogger;
   private Consumer<String> debugLogger;
+  private Url              root;
 
-  private Url root;
-
+  {
+    LINK_MATCHERS.put("src=\"", "\"");
+    LINK_MATCHERS.put("src=\'", "\'");
+    LINK_MATCHERS.put("href=\"", "\"");
+    LINK_MATCHERS.put("href=\'", "\'");
+  }
 
   @Autowired
   public WebCrawlerService(
@@ -121,14 +125,14 @@ public class WebCrawlerService {
           String html,
           List<Url> links
   ) {
-    int startLinkIndex = getLinkIndex(html, START_MATCHER);
+    Matcher matcher = matchLink(html);
 
-    if (startLinkIndex != -1) {
-      String subHtml = html.substring(startLinkIndex);
+    if (matcher != null) {
+      String subHtml = html.substring(matcher.startIndex);
 
       crawlHtml(parent, subHtml, links);
 
-      int endLinkIndex = subHtml.indexOf(END_MATCHER);
+      int endLinkIndex = subHtml.indexOf(matcher.end);
 
       if (endLinkIndex != -1) {
         Url parsedLink = Url.of(subHtml.substring(0, endLinkIndex));
@@ -148,11 +152,28 @@ public class WebCrawlerService {
     }
   }
 
-  private int getLinkIndex(String html, String startMatcher) {
-    int linkIndex = html.indexOf(startMatcher);
+  private Matcher matchLink(String html) {
+    return LINK_MATCHERS.keySet()
+                        .stream()
+                        .filter(html::contains)
+                        .findAny()
+                        .map((start) -> matchStart(html, start))
+                        .orElse(null);
+  }
 
-    return linkIndex == -1
-           ? -1
-           : linkIndex + startMatcher.length();
+  private Matcher matchStart(String html, String start) {
+    Matcher matcher = new Matcher();
+
+    matcher.startIndex = html.indexOf(start) + start.length();
+    matcher.start = start;
+    matcher.end = LINK_MATCHERS.get(start);
+
+    return matcher;
+  }
+
+  private class Matcher {
+    public int    startIndex;
+    public String start;
+    public String end;
   }
 }

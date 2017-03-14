@@ -1,6 +1,9 @@
 package com.jkramr.webcrawler;
 
-import com.jkramr.webcrawler.service.*;
+import com.jkramr.webcrawler.service.AssetLogger;
+import com.jkramr.webcrawler.service.JsonAssetLogger;
+import com.jkramr.webcrawler.service.WebCrawlerService;
+import com.jkramr.webcrawler.service.WebDictionary;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
@@ -8,7 +11,6 @@ import org.springframework.boot.web.client.RestTemplateBuilder;
 import org.springframework.context.annotation.Bean;
 import org.springframework.web.client.RestTemplate;
 
-import java.util.List;
 import java.util.function.Consumer;
 
 @SpringBootApplication
