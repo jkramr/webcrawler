@@ -83,7 +83,7 @@ public class WebCrawlerService {
         if (isHtmlPage) {
           List<Url> unvisitedLinks = new ArrayList<>();
 
-          assetLogger.startForPage(current);
+          assetLogger.startForPage(current.getValue());
 
           crawlHtml(current, content, unvisitedLinks);
 

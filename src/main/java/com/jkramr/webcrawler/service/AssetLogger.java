@@ -10,7 +10,7 @@ public interface AssetLogger {
 
   void endLog();
 
-  void startForPage(Url current);
+  void startForPage(String current);
 
   void endForPage();
 

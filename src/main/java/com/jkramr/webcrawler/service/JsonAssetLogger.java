@@ -27,7 +27,7 @@ public class JsonAssetLogger
   }
 
   @Override
-  public void startForPage(Url current) {
+  public void startForPage(String current) {
     logger.accept("  {");
     logger.accept("    \"url\": \"" + current + "\",");
     logger.accept("    \"assets\": [");
