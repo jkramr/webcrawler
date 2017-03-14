@@ -7,20 +7,26 @@ import org.springframework.stereotype.Component;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
+import java.util.function.Consumer;
+import java.util.function.Predicate;
 
 @Data
 @Component
 public class WebDictionary {
 
+  public static Predicate<TrieNode> FOR_ALL_ASSETS =
+          node -> node.getAssets() != null;
   TrieNode head;
 
-  public boolean isEmpty() {
-    return head == null;
+  public Consumer<TrieNode> consumeUrl(Consumer<String> consumer) {
+    return node -> consumer.accept(getUrl(node));
   }
 
   public Url add(Url url) {
+//    links.add(url.getValue());
+
     if (url == null) {
-      return url;
+      return null;
     }
 
     if (head == null) {
@@ -30,6 +36,23 @@ public class WebDictionary {
     insert(url.getValue());
 
     return url;
+  }
+
+  public Url addAsset(Url asset, String assetType, Url parent) {
+    if (parent == null || asset == null) {
+      return null;
+    }
+
+    String assetUrl  = asset.getValue();
+    String parentUrl = parent.getValue();
+
+    TrieNode parentNode = insert(parentUrl);
+
+    TrieNode assetNode = insert(assetUrl);
+
+    parentNode.addAsset(assetType, assetNode);
+
+    return asset;
   }
 
   public boolean contains(Url url) {
@@ -50,21 +73,8 @@ public class WebDictionary {
     return node.depth == word.length();
   }
 
-  public Url addAsset(Url parent, String assetType, Url asset) {
-    if (parent == null || asset == null) {
-      return null;
-    }
-
-    String assetUrl  = asset.getValue();
-    String parentUrl = parent.getValue();
-
-    TrieNode parentNode = insert(parentUrl);
-
-    TrieNode assetNode = insert(assetUrl);
-
-    parentNode.addAsset(assetType, assetNode);
-
-    return asset;
+  public boolean isEmpty() {
+    return head == null;
   }
 
   public boolean hasAssets(Url url) {
@@ -95,6 +105,47 @@ public class WebDictionary {
     });
 
     return assets;
+  }
+
+  public void traverse(
+          Url fromUrl,
+          Predicate<TrieNode> predicate,
+          Consumer<TrieNode> consumer
+  ) {
+    if (fromUrl == null) {
+      return;
+    }
+
+    TrieNode lastNode = searchTreeDown(head, fromUrl.getValue());
+
+    traverse(lastNode, predicate, consumer);
+  }
+
+  private String getUrl(TrieNode node) {
+    if (node == null) {
+      return null;
+    }
+
+    return buildUrlUp(node);
+  }
+
+  private void traverse(
+          TrieNode current,
+          Predicate<TrieNode> predicate,
+          Consumer<TrieNode> consumer
+  ) {
+    if (current != null && current.children != null) {
+      if (predicate.test(current)) {
+        consumer.accept(current);
+      }
+
+      current.children.forEach((character, child) ->
+                                       traverse(
+                                               child,
+                                               predicate,
+                                               consumer
+                                       ));
+    }
   }
 
   private TrieNode insert(String url) {

@@ -5,50 +5,60 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 import org.springframework.web.client.RestTemplate;
 
+import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.HashMap;
+import java.util.List;
+import java.util.function.Consumer;
 
 @Component
 public class WebCrawlerService {
 
-  private static final HashMap<String, String> LINK_MATCHERS = new HashMap<>();
-
-  static {
-    LINK_MATCHERS.put("href=\"", "\"");
-    LINK_MATCHERS.put("href=\'", "\'");
-  }
-
-  private final RestTemplate restTemplate;
+  private static final String START_MATCHER = "href=\"";
+  private static final String END_MATCHER   = "\"";
 
   @Value("${domain:google.com}")
-  String domain;
-
-  @Value("${depth:2}")
-  int depth;
-
-  @Value("${assetTypes:[jpg,css,js,png]}")
+  String   domain;
+  @Value("${debug:false}")
+  boolean  debug;
+  @Value("${depth:1}")
+  int      depth;
+  @Value("${assetTypes:jpg,css,js,png}")
   String[] assetTypes;
 
-  private Url           root;
-  private WebDictionary webDictionary;
+  private WebDictionary    webDictionary;
+  private RestTemplate     restTemplate;
+  private AssetLogger      assetLogger;
+  private Consumer<String> debugLogger;
+
+  private Url root;
+
 
   @Autowired
   public WebCrawlerService(
           RestTemplate restTemplate,
-          WebDictionary webDictionary
+          WebDictionary webDictionary,
+          AssetLogger assetLogger,
+          Consumer<String> debugLogger
   ) {
     this.webDictionary = webDictionary;
     this.restTemplate = restTemplate;
+    this.assetLogger = assetLogger;
+    this.debugLogger = debugLogger;
   }
 
   public void startCrawl() {
     root = Url.ofFull(domain);
 
-    crawl(root, root, 0);
+    webDictionary.add(root);
+
+    assetLogger.startLog();
+
+    crawl(root, 0);
+
+    assetLogger.endLog();
   }
 
   private void crawl(
-          Url parent,
           Url current,
           int depth
   ) {
@@ -59,69 +69,66 @@ public class WebCrawlerService {
                 String.class
         );
 
-        if (html == null) {
-          webDictionary.add(current);
+        if (html != null && html.contains("<html")) {
+          List<Url> unvisitedLinks = new ArrayList<>();
 
-          System.out.println("404: Not found");
+          crawlHtml(current, html, unvisitedLinks);
+
+          if (debug) {
+            debugLogger.accept("Stumbled upon new links on " +
+                               current.getValue() +
+                               ": " +
+                               unvisitedLinks);
+          }
+
+          logAssets(current);
+
+          unvisitedLinks.forEach(link -> crawl(link, depth + 1));
         }
-
-        if (!webDictionary.contains(current)) {
-          System.out.println(current);
-
-          addToDictionary(parent, current);
-
-          crawlHtml(parent, html, depth);
-        }
-
       } catch (Exception ignored) {
       }
     }
   }
 
-  private void addToDictionary(
-          Url parent,
+  private void logAssets(
           Url current
+  ) {
+    webDictionary.traverse(
+            current,
+            WebDictionary.FOR_ALL_ASSETS,
+            webDictionary.consumeUrl(assetLogger.getLogger())
+    );
+  }
+
+  private void addToDictionary(
+          Url current,
+          Url parent
   ) {
     Arrays.stream(assetTypes)
           .filter(current.getValue()::endsWith)
           .findAny()
-          .map(asset -> webDictionary.addAsset(
-                  parent,
-                  asset,
-                  current
-          ))
+          .map(asset ->
+                       webDictionary.addAsset(
+                               current,
+                               asset,
+                               parent
+                       ))
           .orElseGet(() -> webDictionary.add(current));
   }
 
   private void crawlHtml(
           Url parent,
           String html,
-          int depth
+          List<Url> links
   ) {
-    LINK_MATCHERS.forEach((startMatcher, endMatcher) -> crawlMatchingLinks(
-            parent,
-            html,
-            depth,
-            startMatcher,
-            endMatcher
-    ));
-  }
-
-  private void crawlMatchingLinks(
-          Url parent,
-          String html,
-          int depth,
-          String startMatcher,
-          String endMatcher
-  ) {
-    int startLinkIndex = getLinkIndex(html, startMatcher);
+    int startLinkIndex = getLinkIndex(html, START_MATCHER);
 
     if (startLinkIndex != -1) {
       String subHtml = html.substring(startLinkIndex);
 
-      crawlHtml(parent, subHtml, depth);
+      crawlHtml(parent, subHtml, links);
 
-      int endLinkIndex = subHtml.indexOf(endMatcher);
+      int endLinkIndex = subHtml.indexOf(END_MATCHER);
 
       if (endLinkIndex != -1) {
         Url parsedLink = Url.of(subHtml.substring(0, endLinkIndex));
@@ -131,7 +138,11 @@ public class WebCrawlerService {
                       ? parsedLink
                       : root.append(parsedLink);
 
-          crawl(parent, child, depth + 1);
+          if (!webDictionary.contains(child)) {
+            links.add(child);
+          }
+
+          addToDictionary(child, parent);
         }
       }
     }

@@ -20,5 +20,7 @@ For big numbers of `crawler.depth` (> 1000)
 you might consider increasing stack size
 due to recursive implementation
 
+`-Ddebug` - turn on intermediary log output (crawled links per page)
+
 `-DassetTypes` - list of assets
 `[png,jpf,js,css]`
