@@ -5,12 +5,13 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 import org.springframework.web.client.RestTemplate;
 
+import java.util.Arrays;
 import java.util.HashMap;
 
 @Component
 public class WebCrawlerService {
 
-  public static final  HashMap<String, String> LINK_MATCHERS = new HashMap<>();
+  private static final HashMap<String, String> LINK_MATCHERS = new HashMap<>();
   private static final int                     MAX_DEPTH     = 2;
 
   static {
@@ -19,25 +20,38 @@ public class WebCrawlerService {
   }
 
   private final RestTemplate restTemplate;
+
   @Value("${domain:google.com}")
   String domain;
 
+  @Value("${asset_types:[jpg,css,js,png]}")
+  String[] asset_types;
+
+  private Url root;
+  private WebDictionary webDictionary;
+
   @Autowired
-  public WebCrawlerService(RestTemplate restTemplate) {
+  public WebCrawlerService(
+          RestTemplate restTemplate,
+          WebDictionary webDictionary
+  ) {
+    root = Url.ofFull(domain);
+
+    this.webDictionary = webDictionary;
     this.restTemplate = restTemplate;
   }
 
   public void startCrawl() {
-    Url root = Url.ofFull(domain);
+    crawl(root, root, 0);
 
-    Dictionary dictionary = new Dictionary();
-
-    crawl(root, root, dictionary, 0);
-
-    System.out.println(dictionary);
+    System.out.println(webDictionary);
   }
 
-  private boolean crawl(Url root, Url current, Dictionary dictionary, int depth) {
+  private boolean crawl(
+          Url parent,
+          Url current,
+          int depth
+  ) {
     if (depth <= MAX_DEPTH) {
       try {
         String html = restTemplate.getForObject(
@@ -46,18 +60,19 @@ public class WebCrawlerService {
         );
 
         if (html == null) {
-          dictionary.add(current.getValue());
+          webDictionary.add(current.getValue());
 
           System.out.println("404: Not found");
+
           return false;
         }
 
-        if (!dictionary.contains(current.getValue())) {
+        if (!webDictionary.contains(current.getValue())) {
           System.out.println(current);
 
-          dictionary.add(current.getValue());
+          addToDictionary(parent, current);
 
-          return crawlHtml(root, html, dictionary, depth);
+          return crawlHtml(parent, html, depth);
         }
 
         return false;
@@ -69,10 +84,24 @@ public class WebCrawlerService {
     }
   }
 
+  private void addToDictionary(
+          Url parent,
+          Url current
+  ) {
+    Arrays.stream(asset_types)
+          .filter(current.getValue()::endsWith)
+          .findAny()
+          .map(asset -> webDictionary.addAsset(
+                  parent,
+                  asset,
+                  current.getValue()
+          ))
+          .orElseGet(() -> webDictionary.add(current.getValue()));
+  }
+
   private boolean crawlHtml(
-          Url root,
+          Url parent,
           String html,
-          Dictionary dictionary,
           int depth
   ) {
     LINK_MATCHERS.forEach((startMatcher, endMatcher) -> {
@@ -81,19 +110,19 @@ public class WebCrawlerService {
       if (startLinkIndex != -1) {
         String subHtml = html.substring(startLinkIndex);
 
-        crawlHtml(root, subHtml, dictionary, depth);
+        crawlHtml(parent, subHtml, depth);
 
         int endLinkIndex = subHtml.indexOf(endMatcher);
 
         if (endLinkIndex != -1) {
-          Url url = Url.of(subHtml.substring(0, endLinkIndex));
+          Url parsedLink = Url.of(subHtml.substring(0, endLinkIndex));
 
-          if (!url.isFullPath() || root.hasChild(url)) {
-            Url childUrl = root.hasChild(url)
-                           ? url
-                           : root.append(url);
+          if (!parsedLink.isFullPath() || root.hasChild(parsedLink)) {
+            Url child = root.hasChild(parsedLink)
+                           ? parsedLink
+                           : root.append(parsedLink);
 
-            crawl(root, childUrl, dictionary, depth + 1);
+            crawl(parent, child, depth + 1);
           }
         }
       }

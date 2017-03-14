@@ -1,7 +1,6 @@
 package com.jkramr.webcrawler;
 
 import com.jkramr.webcrawler.service.WebCrawlerService;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
@@ -15,9 +14,6 @@ public class WebCrawlerApplication {
   public static void main(String[] args) {
     SpringApplication.run(WebCrawlerApplication.class, args);
   }
-
-  @Value("${domain:google.com}")
-  String domain;
 
   @Bean
   public RestTemplate restTemplate(RestTemplateBuilder builder) {
