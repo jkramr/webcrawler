@@ -33,13 +33,13 @@ public class WebDictionaryTest {
     nestingWithAssets.addAsset(
             Url.of("https://example.com"),
             "png",
-            Url.of("https://example.com/images/123.png")
+            Url.of("https://example.com/123.png")
     );
 
     nestingWithAssets.addAsset(
             Url.of("https://example.com"),
             "png",
-            Url.of("https://example.com/images/1234.png")
+            Url.of("https://example.com/1234.png")
     );
   }
 
@@ -103,6 +103,11 @@ public class WebDictionaryTest {
             true,
             nestingWithAssets.hasAssets(Url.of("https://example.com"))
     );
+
+    assertEquals(
+            true,
+            nestingWithAssets.hasAssets(Url.of("https://example.com/"))
+    );
   }
 
   @Test
@@ -116,10 +121,18 @@ public class WebDictionaryTest {
 
     assertEquals(
             Arrays.asList(
-                    "https://example.com/images/123.png",
-                    "https://example.com/images/1234.png"
+                    "https://example.com/123.png",
+                    "https://example.com/1234.png"
             ),
             nestingWithAssets.getAssets(Url.of("https://example.com"))
+    );
+
+    assertEquals(
+            Arrays.asList(
+                    "https://example.com/123.png",
+                    "https://example.com/1234.png"
+            ),
+            nestingWithAssets.getAssets(Url.of("https://example.com/"))
     );
 
   }

@@ -1,6 +1,7 @@
 package com.jkramr.webcrawler.service;
 
 import lombok.Data;
+import lombok.ToString;
 import org.springframework.stereotype.Component;
 
 import java.util.ArrayList;
@@ -57,9 +58,9 @@ public class WebDictionary {
     String assetUrl  = asset.getValue();
     String parentUrl = parent.getValue();
 
-    TrieNode assetNode = insert(assetUrl);
-
     TrieNode parentNode = insert(parentUrl);
+
+    TrieNode assetNode = insert(assetUrl);
 
     parentNode.addAsset(assetType, assetNode);
 
@@ -108,7 +109,7 @@ public class WebDictionary {
 
   private TrieNode insertAtLastFound(TrieNode current, String url) {
 
-    if (current.depth == url.length()) {
+    if (current.depth >= url.length()) {
       return current;
     }
 
@@ -116,14 +117,16 @@ public class WebDictionary {
 
     TrieNode node = new TrieNode(current.depth + 1);
 
+    node.parent = current;
+    node.value = character;
+
     current.add(character, node);
 
     return insertAtLastFound(node, url);
   }
 
   private TrieNode searchTreeDown(TrieNode current, String url) {
-
-    if (current.depth == url.length() ||
+    if (current.depth >= url.length() ||
         !current.hasChild(url.charAt(current.depth))
             ) {
       return current;
@@ -149,12 +152,13 @@ public class WebDictionary {
       return stringBuilder;
     }
 
-    stringBuilder.insert(0, current.parent.get(current.value));
+    stringBuilder.insert(0, current.value);
 
     return buildUrlUp(current.parent, stringBuilder);
   }
 
   @Data
+  @ToString(of = {"depth", "value"})
   private class TrieNode {
     final int depth;
 
