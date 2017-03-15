@@ -3,7 +3,6 @@ package com.jkramr.webcrawler;
 import com.jkramr.webcrawler.service.AssetLogger;
 import com.jkramr.webcrawler.service.JsonAssetLogger;
 import com.jkramr.webcrawler.service.WebCrawlerService;
-import com.jkramr.webcrawler.service.WebDictionary;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;

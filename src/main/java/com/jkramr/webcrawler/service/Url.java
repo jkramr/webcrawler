@@ -20,7 +20,7 @@ public class Url {
     this.value = url;
   }
 
-  public static boolean isFullPath(String url) {
+  private static boolean isFullPath(String url) {
     return url.startsWith(HTTPS_PREFIX);
   }
 

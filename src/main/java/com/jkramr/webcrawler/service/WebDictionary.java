@@ -23,8 +23,6 @@ public class WebDictionary {
   }
 
   public Url add(Url url) {
-//    links.add(url.getValue());
-
     if (url == null) {
       return null;
     }
@@ -73,11 +71,11 @@ public class WebDictionary {
     return node.depth == word.length();
   }
 
-  public boolean isEmpty() {
+  boolean isEmpty() {
     return head == null;
   }
 
-  public boolean hasAssets(Url url) {
+  boolean hasAssets(Url url) {
     if (url == null) {
       return false;
     }
@@ -87,7 +85,7 @@ public class WebDictionary {
     return trieNode.assets != null;
   }
 
-  public List<String> getAssets(Url parent) {
+  List<String> getAssets(Url parent) {
     List<String> assets = new ArrayList<>();
 
     if (parent == null) {
@@ -219,15 +217,11 @@ public class WebDictionary {
     HashMap<Character, TrieNode>    children;
     HashMap<String, List<TrieNode>> assets;
 
-    public boolean hasChild(char c) {
-      if (children == null) {
-        return false;
-      }
-
-      return children.containsKey(c);
+    boolean hasChild(char c) {
+      return children != null && children.containsKey(c);
     }
 
-    public TrieNode get(char c) {
+    TrieNode get(char c) {
       if (children == null) {
         return null;
       }
@@ -235,7 +229,7 @@ public class WebDictionary {
       return children.get(c);
     }
 
-    public void add(char c, TrieNode childNode) {
+    void add(char c, TrieNode childNode) {
       if (children == null) {
         children = new HashMap<>();
       }
@@ -243,7 +237,7 @@ public class WebDictionary {
       children.put(c, childNode);
     }
 
-    public void addAsset(String assetType, TrieNode assetNode) {
+    void addAsset(String assetType, TrieNode assetNode) {
       if (assets == null) {
         assets = new HashMap<>();
       }
