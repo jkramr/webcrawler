@@ -3,7 +3,6 @@ package com.jkramr.webcrawler.service;
 import lombok.Data;
 import lombok.NonNull;
 
-import java.util.List;
 import java.util.function.Consumer;
 
 @Data
