@@ -1,14 +1,14 @@
-#Web Crawler
+# Web Crawler
 
 RESTful microservice, powered by Spring Boot, one-button bootstrap
 
-##To run the program:
+## To run the program:
 
 - Clone this repository
 
 - `./gradlew bootRun`
 
-##Available options:
+## Available options:
 
 `-Dserver.port` - port for this application
 
